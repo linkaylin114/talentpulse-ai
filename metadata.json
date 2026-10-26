@@ -1,0 +1,7 @@
+{
+  "name": "TalentPulse AI - Tuyển Dụng & ATS Thông Minh",
+  "description": "Nền tảng tuyển dụng thông minh tích hợp AI: Tự động lọc CV từ email & LinkedIn, đối chiếu JD, đánh giá thang điểm, test năng lực trực tuyến, lên lịch phỏng vấn và quản lý Talent Pool.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
