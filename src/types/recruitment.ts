@@ -1,14 +1,14 @@
 export type RecruitmentStage =
-  | 'cv_filter'        // Lọc CV
+  | 'cv_filter'        // Lọc CV & Đối chiếu JD
   | 'assessment'       // Test năng lực
-  | 'interview_1'      // Phỏng vấn vòng 1 (HR/Technical)
-  | 'interview_2'      // Phỏng vấn chuyên sâu (Manager/Final)
+  | 'interview_1'      // Phỏng vấn vòng 1
+  | 'interview_2'      // Phỏng vấn chuyên sâu
   | 'offer'            // Đề xuất Offer
   | 'hired'            // Đã tuyển dụng
   | 'rejected'         // Từ chối
   | 'talent_pool';     // Lưu trữ Talent Pool
 
-export type CandidateSource = 'Email' | 'LinkedIn' | 'Direct Upload' | 'Website' | 'Referral';
+export type CandidateSource = 'Email' | 'Tải lên CV (File Upload)' | 'Portal Website' | 'Nội bộ Giới thiệu';
 
 export type MatchLevel = 'Cao' | 'Trung bình' | 'Thấp';
 
@@ -43,6 +43,7 @@ export interface Job {
   benefits: string[];
   criteria: JobCriterion[];
   applicantCount: number;
+  createdAt?: string;
 }
 
 export interface CriterionEvaluation {
@@ -96,6 +97,7 @@ export interface AiAnalysis {
 export interface AssessmentQuestion {
   id: string;
   topic: string;
+  dimension?: 'IQ' | 'EQ' | 'AQ' | 'Chuyên môn';
   question: string;
   options: string[];
   correctIndex: number;
@@ -106,19 +108,30 @@ export interface AssessmentTest {
   id: string;
   jobId: string;
   testTitle: string;
+  testType?: 'combo_iq_eq_aq' | 'technical' | 'iq' | 'eq' | 'aq';
+  description?: string;
   durationMinutes: number;
   passingScore: number;
+  iqCount?: number;
+  eqCount?: number;
+  aqCount?: number;
   questions: AssessmentQuestion[];
 }
 
 export interface CandidateTestResult {
   testId: string;
+  testTitle?: string;
   score: number; // 0 - 100
   passed: boolean;
   completedAt: string;
   correctAnswers: number;
   totalQuestions: number;
   timeSpentMinutes: number;
+  iqScore?: number;
+  eqScore?: number;
+  aqScore?: number;
+  technicalScore?: number;
+  psychometricSummary?: string;
   breakdown: { topic: string; score: number }[];
   answers: { questionIndex: number; selectedIndex: number; isCorrect: boolean }[];
 }
@@ -171,10 +184,17 @@ export interface Candidate {
   appliedDate: string;
   source: CandidateSource;
   rawCvText?: string;
+  sourceFileName?: string;
   extractedInfo: ExtractedCvInfo;
   aiAnalysis: AiAnalysis;
   stage: RecruitmentStage;
   testResult?: CandidateTestResult;
+  assessmentStatus?: 'not_sent' | 'auto_sent' | 'completed';
+  assessmentInviteDate?: string;
+  autoSentTestTitle?: string;
+  iqScore?: number;
+  eqScore?: number;
+  aqScore?: number;
   interviewSchedule?: InterviewSchedule;
   talentPoolData?: TalentPoolData;
   emailLogs: EmailLog[];
@@ -196,18 +216,4 @@ export interface EmailInboxItem {
   predictedJobTitle?: string;
   status: 'unread' | 'read' | 'processed' | 'imported';
   emailBody: string;
-}
-
-export interface LinkedInProfilePreview {
-  profileUrl: string;
-  fullName: string;
-  headline: string;
-  currentCompany: string;
-  location: string;
-  yearsOfExperience: number;
-  summary: string;
-  skills: string[];
-  sourcingRating: number;
-  education: Education[];
-  workHistory: WorkExperience[];
 }

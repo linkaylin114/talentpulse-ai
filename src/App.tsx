@@ -15,21 +15,23 @@ import {
   EmailLog,
   CandidateTestResult,
 } from './types/recruitment';
-import { Header, ActiveTab } from './components/Header';
+import { Sidebar, ActiveTab } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
+import { JobManagementView } from './components/JobManagementView';
 import { CvFilterView } from './components/CvFilterView';
 import { EmailInboxView } from './components/EmailInboxView';
-import { LinkedInImportView } from './components/LinkedInImportView';
 import { PipelineKanbanView } from './components/PipelineKanbanView';
 import { CandidateComparisonView } from './components/CandidateComparisonView';
 import { AssessmentToolView } from './components/AssessmentToolView';
 import { TalentPoolView } from './components/TalentPoolView';
+import { SettingsView } from './components/SettingsView';
 import { CandidateDetailModal } from './components/CandidateDetailModal';
 import { InterviewScheduleModal } from './components/InterviewScheduleModal';
 import { EmailSenderModal } from './components/EmailSenderModal';
-import { CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { CheckCircle2, X } from 'lucide-react';
 
 export default function App() {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [jobs, setJobs] = useState<Job[]>(INITIAL_JOBS);
   const [candidates, setCandidates] = useState<Candidate[]>(INITIAL_CANDIDATES);
@@ -37,7 +39,6 @@ export default function App() {
   const [assessments, setAssessments] = useState<AssessmentTest[]>(INITIAL_ASSESSMENTS);
 
   const [selectedJobId, setSelectedJobId] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
 
   // Modals
   const [activeCandidateDetail, setActiveCandidateDetail] = useState<Candidate | null>(null);
@@ -54,6 +55,66 @@ export default function App() {
     setTimeout(() => {
       setToastMessage(null);
     }, 4500);
+  };
+
+  // Automated assessment dispatcher for candidates
+  const handleAutoSendAssessment = (targetCandidateIds?: string[], testTitle = 'Combo Đánh Giá Toàn Diện: IQ + EQ + AQ') => {
+    const inviteTime = new Date().toISOString().replace('T', ' ').slice(0, 16);
+    let affectedCount = 0;
+
+    setCandidates((prev) =>
+      prev.map((c) => {
+        const isTarget = !targetCandidateIds || targetCandidateIds.length === 0 || targetCandidateIds.includes(c.id);
+        if (isTarget && !c.testResult) {
+          affectedCount++;
+          const autoInviteLog: EmailLog = {
+            id: `email-invite-${Date.now()}-${c.id}`,
+            type: 'assessment_invite',
+            subject: `[TalentPulse] Thư mời làm bài test năng lực IQ + EQ + AQ - Vị trí ${c.appliedJobTitle}`,
+            sentAt: inviteTime,
+            recipient: c.email,
+            status: 'delivered',
+            htmlPreview: `<p>Kính gửi <strong>${c.name}</strong>, chúc mừng hồ sơ của bạn đã vượt qua vòng Lọc CV. Mời bạn thực hiện bài khảo sát kết hợp IQ + EQ + AQ trước phỏng vấn...</p>`,
+          };
+          return {
+            ...c,
+            assessmentStatus: 'auto_sent',
+            assessmentInviteDate: inviteTime,
+            autoSentTestTitle: testTitle,
+            emailLogs: [autoInviteLog, ...c.emailLogs],
+          };
+        }
+        return c;
+      })
+    );
+
+    showToast(`Đã tự động gửi link bài test IQ/EQ/AQ cho ${affectedCount > 0 ? affectedCount : 1} ứng viên qua email!`);
+  };
+
+  // Job Management Handlers
+  const handleAddNewJob = (newJob: Job) => {
+    setJobs((prev) => [newJob, ...prev]);
+    setSelectedJobId(newJob.id);
+    showToast(`Đã tạo thành công vị trí mới "${newJob.title}" với ${newJob.criteria.length} tiêu chí!`);
+  };
+
+  const handleUpdateJob = (updatedJob: Job) => {
+    setJobs((prev) => prev.map((j) => (j.id === updatedJob.id ? updatedJob : j)));
+    showToast(`Đã cập nhật bản mô tả công việc (JD) cho "${updatedJob.title}"`);
+  };
+
+  const handleDeleteJob = (jobId: string) => {
+    setJobs((prev) => prev.filter((j) => j.id !== jobId));
+    if (selectedJobId === jobId) {
+      setSelectedJobId('all');
+    }
+    showToast('Đã xóa vị trí tuyển dụng.');
+  };
+
+  const handleSelectJobForScreening = (jobId: string) => {
+    setSelectedJobId(jobId);
+    setActiveTab('cv_filter');
+    showToast(`Đang lọc CV theo tiêu chuẩn vị trí đã chọn.`);
   };
 
   // Stage update handler
@@ -196,7 +257,7 @@ export default function App() {
   // Add new parsed candidate
   const handleAddNewCandidate = (candidate: Candidate) => {
     setCandidates((prev) => [candidate, ...prev]);
-    showToast(`Đã lọc và thêm ứng viên "${candidate.name}" vào hệ thống!`);
+    showToast(`Đã phân tích tệp và thêm ứng viên "${candidate.name}" vào hệ thống!`);
   };
 
   // Import Candidate from Email
@@ -235,6 +296,7 @@ export default function App() {
         appliedJobTitle: targetJob.title,
         appliedDate: new Date().toISOString().split('T')[0],
         source: 'Email',
+        sourceFileName: emailItem.attachmentFileName || 'Email_Attachment.pdf',
         rawCvText: cvText,
         extractedInfo: {
           fullName: extractedInfo.fullName || emailItem.senderName,
@@ -280,119 +342,34 @@ export default function App() {
     }
   };
 
-  // Import Candidate from LinkedIn
-  const handleImportCandidateFromLinkedIn = async (
-    parsedData: any,
-    targetJob: Job
-  ): Promise<Candidate | null> => {
-    try {
-      // Evaluate against criteria using Gemini
-      const response = await fetch('/api/gemini/parse-and-evaluate-cv', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cvText: `${parsedData.fullName}\n${parsedData.headline}\n${parsedData.summary}\nSkills: ${parsedData.skills?.join(', ')}\nExperience: ${JSON.stringify(parsedData.workHistory)}`,
-          jobTitle: targetJob.title,
-          jobRequirements: targetJob.description + '\n' + targetJob.requirements.join('\n'),
-          criteriaList: targetJob.criteria,
-        }),
-      });
-
-      const result = await response.json();
-      const aiAnalysis = result.data?.aiAnalysis || {
-        overallScore: 88,
-        matchLevel: 'Cao',
-        recommendation: 'Tuyển dụng ngay',
-        summaryAssessment: 'Hồ sơ LinkedIn có năng lực chuyên môn phù hợp.',
-        strengths: ['Hồ sơ LinkedIn ấn tượng', 'Kinh nghiệm phù hợp'],
-        gapsOrConcerns: [],
-        suggestedInterviewQuestions: [],
-        criteriaEvaluations: [],
-      };
-
-      const newCand: Candidate = {
-        id: `cand-${Date.now()}`,
-        name: parsedData.fullName,
-        email: `${parsedData.fullName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
-        phone: '0988 999 111',
-        avatar: `https://images.unsplash.com/photo-${1507003211169 + (candidates.length % 5)}?w=150&auto=format&fit=crop&q=80`,
-        appliedJobId: targetJob.id,
-        appliedJobTitle: targetJob.title,
-        appliedDate: new Date().toISOString().split('T')[0],
-        source: 'LinkedIn',
-        extractedInfo: {
-          fullName: parsedData.fullName,
-          email: `${parsedData.fullName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
-          phone: '0988 999 111',
-          currentRole: parsedData.headline,
-          yearsOfExperience: parsedData.yearsOfExperience || 5,
-          summary: parsedData.summary,
-          skills: parsedData.skills || [],
-          softSkills: ['Giao tiếp', 'Lãnh đạo'],
-          languages: ['Tiếng Việt', 'Tiếng Anh'],
-          certifications: [],
-          education: parsedData.education || [],
-          workExperience: parsedData.workHistory || [],
-        },
-        aiAnalysis: {
-          overallScore: aiAnalysis.overallScore || 90,
-          matchLevel: aiAnalysis.matchLevel || 'Cao',
-          recommendation: aiAnalysis.recommendation || 'Tuyển dụng ngay',
-          summaryAssessment: aiAnalysis.summaryAssessment,
-          strengths: aiAnalysis.strengths || [],
-          gapsOrConcerns: aiAnalysis.gapsOrConcerns || [],
-          suggestedInterviewQuestions: aiAnalysis.suggestedInterviewQuestions || [],
-          criteriaEvaluations: aiAnalysis.criteriaEvaluations || [],
-        },
-        stage: 'cv_filter',
-        talentPoolData: {
-          isSaved: true,
-          tags: ['LinkedIn Sourcing', 'High Potential'],
-          rating: parsedData.sourcingRating || 5,
-          savedDate: new Date().toISOString().split('T')[0],
-          notes: 'Thu thập nhanh qua LinkedIn Sourcing tool.',
-          category: targetJob.title,
-        },
-        emailLogs: [],
-        notes: [
-          {
-            id: `note-${Date.now()}`,
-            author: 'LinkedIn Recruiter Agent',
-            createdAt: 'Vừa xong',
-            content: `Thu thập từ LinkedIn URL/Profile. Điểm AI: ${aiAnalysis.overallScore}/100`,
-          },
-        ],
-      };
-
-      setCandidates((prev) => [newCand, ...prev]);
-      showToast(`Đã thu thập và lưu hồ sơ LinkedIn của ${newCand.name}!`);
-      return newCand;
-    } catch (err: any) {
-      console.error(err);
-      throw err;
-    }
-  };
-
   const unreadEmailCount = emails.filter((e) => e.status !== 'imported').length;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
-      {/* Global Header */}
-      <Header
+    <div className="h-screen w-screen flex bg-slate-50 text-slate-900 selection:bg-indigo-500 selection:text-white relative overflow-hidden">
+      {/* Ambient Background Orbs */}
+      <div className="ambient-bg" aria-hidden="true">
+        <div className="ambient-orb-1" />
+        <div className="ambient-orb-2" />
+        <div className="ambient-orb-3" />
+      </div>
+
+      {/* Collapsible Left Sidebar */}
+      <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         jobs={jobs}
         selectedJobId={selectedJobId}
         setSelectedJobId={setSelectedJobId}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
         onOpenUploadModal={() => setActiveTab('cv_filter')}
-        onOpenLinkedInModal={() => setActiveTab('linkedin_import')}
+        onOpenNewJobModal={() => setActiveTab('jobs_management')}
         unreadEmailCount={unreadEmailCount}
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      {/* Main Content Area - Fluid full width without wide side margins */}
+      <div className="flex-1 min-w-0 flex flex-col h-screen overflow-hidden relative z-10">
+        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-10 py-6 w-full">
         {activeTab === 'dashboard' && (
           <DashboardView
             candidates={candidates}
@@ -402,6 +379,16 @@ export default function App() {
             onNavigateTab={setActiveTab}
             onOpenEmailModal={(cand) => setEmailModalCandidate(cand)}
             onOpenScheduleModal={(cand) => setScheduleModalCandidate(cand)}
+          />
+        )}
+
+        {activeTab === 'jobs_management' && (
+          <JobManagementView
+            jobs={jobs}
+            onAddNewJob={handleAddNewJob}
+            onUpdateJob={handleUpdateJob}
+            onDeleteJob={handleDeleteJob}
+            onSelectJobForScreening={handleSelectJobForScreening}
           />
         )}
 
@@ -423,17 +410,6 @@ export default function App() {
             emails={emails}
             jobs={jobs}
             onImportEmailCandidate={handleImportEmailCandidate}
-            onNavigateToCandidate={(cand) => {
-              setActiveCandidateDetail(cand);
-              setActiveTab('cv_filter');
-            }}
-          />
-        )}
-
-        {activeTab === 'linkedin_import' && (
-          <LinkedInImportView
-            jobs={jobs}
-            onImportCandidateFromLinkedIn={handleImportCandidateFromLinkedIn}
             onNavigateToCandidate={(cand) => {
               setActiveCandidateDetail(cand);
               setActiveTab('cv_filter');
@@ -472,6 +448,7 @@ export default function App() {
             onSaveTestResult={handleSaveTestResult}
             onOpenEmailModal={(cand) => setEmailModalCandidate(cand)}
             onAddNewTest={(newTest) => setAssessments((prev) => [newTest, ...prev])}
+            onAutoSendAssessment={handleAutoSendAssessment}
           />
         )}
 
@@ -492,7 +469,10 @@ export default function App() {
             }}
           />
         )}
+
+        {activeTab === 'settings' && <SettingsView />}
       </main>
+    </div>
 
       {/* Global Modals */}
       {activeCandidateDetail && (
@@ -529,7 +509,7 @@ export default function App() {
           <span className="text-xs sm:text-sm font-medium">{toastMessage.text}</span>
           <button
             onClick={() => setToastMessage(null)}
-            className="text-slate-400 hover:text-white ml-2"
+            className="text-slate-400 hover:text-white ml-2 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>

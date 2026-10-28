@@ -40,7 +40,7 @@ export const CandidateComparisonView: React.FC<CandidateComparisonViewProps> = (
       ? candidates
       : candidates.filter((c) => c.appliedJobId === selectedJobId);
 
-  // Default select the top 2 candidates
+  // Default select the top 3 candidates
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>(
     eligibleCandidates.slice(0, 3).map((c) => c.id)
   );
@@ -53,7 +53,6 @@ export const CandidateComparisonView: React.FC<CandidateComparisonViewProps> = (
       setSelectedCandidateIds((prev) => prev.filter((item) => item !== id));
     } else {
       if (selectedCandidateIds.length >= 4) {
-        // Max 4 candidates
         return;
       }
       setSelectedCandidateIds((prev) => [...prev, id]);
@@ -68,39 +67,41 @@ export const CandidateComparisonView: React.FC<CandidateComparisonViewProps> = (
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
+      <div className="glass-panel rounded-3xl p-6 shadow-sm border border-slate-200/90">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <div className="p-2.5 bg-indigo-600/20 text-indigo-400 rounded-xl border border-indigo-500/30">
-                <Scale className="w-5 h-5 text-indigo-300" />
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 bg-indigo-50 text-indigo-700 rounded-2xl border border-indigo-200 shadow-xs">
+                <Scale className="w-5 h-5 text-indigo-600" />
               </div>
-              <h2 className="text-base sm:text-lg font-bold text-white">
-                Bảng Đối Chiếu & So Sánh Ứng Viên (Candidate Matrix)
-              </h2>
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                  Bảng Đối Chiếu & So Sánh Ứng Viên (Candidate Matrix)
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  So sánh trực quan từ 2 - 4 ứng viên dựa trên thang điểm AI, kết quả kiểm tra năng lực và mức độ đáp ứng JD.
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-slate-400 mt-1">
-              So sánh trực quan từ 2 - 4 ứng viên dựa trên thang điểm AI, kết quả kiểm tra năng lực và mức độ đáp ứng JD.
-            </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">Chọn tối đa 4 ứng viên:</span>
+            <span className="text-xs font-semibold text-slate-500">Chọn tối đa 4 ứng viên:</span>
           </div>
         </div>
 
         {/* Candidate Selector Badges */}
-        <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-800">
+        <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-100">
           {eligibleCandidates.map((c) => {
             const isSelected = selectedCandidateIds.includes(c.id);
             return (
               <button
                 key={c.id}
                 onClick={() => handleToggleCandidate(c.id)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer hover:scale-[1.02] active:scale-95 ${
                   isSelected
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    ? 'btn-primary text-white shadow-md shadow-indigo-600/25'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs'
                 }`}
               >
                 <img
@@ -109,11 +110,17 @@ export const CandidateComparisonView: React.FC<CandidateComparisonViewProps> = (
                     'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50'
                   }
                   alt={c.name}
-                  className="w-4 h-4 rounded-full object-cover"
+                  className="w-4 h-4 rounded-full object-cover border border-slate-200"
                 />
                 <span>{c.name}</span>
-                <span className="text-[10px] opacity-80">({c.aiAnalysis?.overallScore || 0}đ)</span>
-                {isSelected ? <Check className="w-3 h-3 ml-0.5" /> : <Plus className="w-3 h-3 ml-0.5 opacity-50" />}
+                <span className={`text-[10px] ${isSelected ? 'text-indigo-100' : 'text-slate-500'}`}>
+                  ({c.aiAnalysis?.overallScore || 0}đ)
+                </span>
+                {isSelected ? (
+                  <Check className="w-3.5 h-3.5 ml-0.5 text-white" />
+                ) : (
+                  <Plus className="w-3.5 h-3.5 ml-0.5 text-slate-400" />
+                )}
               </button>
             );
           })}
@@ -121,24 +128,29 @@ export const CandidateComparisonView: React.FC<CandidateComparisonViewProps> = (
       </div>
 
       {/* Comparison Matrix Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+      <div className="glass-panel rounded-3xl overflow-hidden shadow-sm border border-slate-200/90">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-950/60">
-                <th className="py-4 px-5 text-xs font-semibold text-slate-400 uppercase w-48 sm:w-56">
+              <tr className="border-b border-slate-200 bg-slate-50">
+                <th className="py-4 px-5 text-xs font-bold text-slate-700 uppercase tracking-wider w-48 sm:w-56 bg-slate-100/70 border-r border-slate-200">
                   Tiêu chí so sánh
                 </th>
                 {selectedCandidates.map((cand) => {
                   const isWinner = cand.id === bestCandidate?.id && selectedCandidates.length > 1;
                   return (
-                    <th key={cand.id} className="py-4 px-5 min-w-[240px] align-top">
+                    <th
+                      key={cand.id}
+                      className="py-4 px-5 min-w-[250px] align-top border-r border-slate-200 last:border-r-0 bg-white"
+                    >
                       <div className="space-y-2">
-                        {isWinner && (
-                          <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                            <Crown className="w-3 h-3 fill-amber-400" />
+                        {isWinner ? (
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-xs">
+                            <Crown className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                             <span>AI Đề Xuất Hàng Đầu</span>
                           </div>
+                        ) : (
+                          <div className="h-6" />
                         )}
                         <div className="flex items-center gap-3">
                           <img
@@ -147,25 +159,27 @@ export const CandidateComparisonView: React.FC<CandidateComparisonViewProps> = (
                               'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'
                             }
                             alt={cand.name}
-                            className="w-10 h-10 rounded-full object-cover border border-indigo-500/30"
+                            className="w-10 h-10 rounded-2xl object-cover border-2 border-indigo-100 shadow-xs"
                           />
-                          <div>
-                            <h3 className="text-sm font-bold text-white">{cand.name}</h3>
-                            <p className="text-[11px] text-slate-400">{cand.appliedJobTitle}</p>
+                          <div className="min-w-0">
+                            <h3 className="text-sm font-black text-slate-900 truncate">{cand.name}</h3>
+                            <p className="text-[11px] text-slate-500 font-medium truncate">
+                              {cand.appliedJobTitle}
+                            </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 pt-1">
+                        <div className="flex items-center gap-2 pt-1 text-xs">
                           <button
                             onClick={() => onSelectCandidate(cand)}
-                            className="text-[11px] text-indigo-400 hover:text-indigo-300 underline font-medium"
+                            className="text-[11px] text-indigo-600 hover:text-indigo-800 underline font-semibold cursor-pointer"
                           >
                             Xem hồ sơ 360
                           </button>
-                          <span className="text-slate-600">•</span>
+                          <span className="text-slate-300">•</span>
                           <button
                             onClick={() => handleToggleCandidate(cand.id)}
-                            className="text-[11px] text-rose-400 hover:text-rose-300"
+                            className="text-[11px] text-rose-600 hover:text-rose-800 font-semibold cursor-pointer"
                           >
                             Bỏ chọn
                           </button>
@@ -177,28 +191,28 @@ export const CandidateComparisonView: React.FC<CandidateComparisonViewProps> = (
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-800/80 text-xs sm:text-sm">
+            <tbody className="divide-y divide-slate-200 text-xs sm:text-sm">
               {/* Row: Điểm số AI Tổng hợp */}
-              <tr className="hover:bg-slate-800/20">
-                <td className="py-3.5 px-5 font-semibold text-slate-300 bg-slate-950/30">
-                  <span className="flex items-center gap-1.5 text-indigo-400 font-bold">
-                    <Sparkles className="w-4 h-4 text-amber-300" />
+              <tr className="hover:bg-slate-50/60 transition-colors">
+                <td className="py-3.5 px-5 font-bold text-slate-800 bg-slate-50/80 border-r border-slate-200">
+                  <span className="flex items-center gap-1.5 text-indigo-700 font-bold">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
                     Điểm AI Khớp JD
                   </span>
                 </td>
                 {selectedCandidates.map((cand) => {
                   const score = cand.aiAnalysis?.overallScore || 0;
                   return (
-                    <td key={cand.id} className="py-3.5 px-5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-extrabold text-white">{score}/100</span>
+                    <td key={cand.id} className="py-3.5 px-5 border-r border-slate-200 last:border-r-0 bg-white">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-xl font-black text-slate-900 tracking-tight">{score}/100</span>
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                          className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${
                             score >= 90
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : score >= 80
-                              ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                              : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                              ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                              : 'bg-amber-50 text-amber-800 border-amber-200'
                           }`}
                         >
                           Khớp {cand.aiAnalysis?.matchLevel}
@@ -210,13 +224,13 @@ export const CandidateComparisonView: React.FC<CandidateComparisonViewProps> = (
               </tr>
 
               {/* Row: Khuyến nghị AI */}
-              <tr className="hover:bg-slate-800/20">
-                <td className="py-3.5 px-5 font-semibold text-slate-300 bg-slate-950/30">
+              <tr className="hover:bg-slate-50/60 transition-colors">
+                <td className="py-3.5 px-5 font-bold text-slate-800 bg-slate-50/80 border-r border-slate-200">
                   Khuyến nghị Tuyển dụng
                 </td>
                 {selectedCandidates.map((cand) => (
-                  <td key={cand.id} className="py-3.5 px-5">
-                    <span className="font-semibold text-indigo-300">
+                  <td key={cand.id} className="py-3.5 px-5 border-r border-slate-200 last:border-r-0 bg-white">
+                    <span className="font-bold text-indigo-700 text-sm">
                       {cand.aiAnalysis?.recommendation || 'Đang đánh giá'}
                     </span>
                   </td>
@@ -224,47 +238,47 @@ export const CandidateComparisonView: React.FC<CandidateComparisonViewProps> = (
               </tr>
 
               {/* Row: Điểm kiểm tra năng lực trực tuyến */}
-              <tr className="hover:bg-slate-800/20">
-                <td className="py-3.5 px-5 font-semibold text-slate-300 bg-slate-950/30">
-                  <span className="flex items-center gap-1.5 text-violet-400">
-                    <FileCheck2 className="w-4 h-4" />
+              <tr className="hover:bg-slate-50/60 transition-colors">
+                <td className="py-3.5 px-5 font-bold text-slate-800 bg-slate-50/80 border-r border-slate-200">
+                  <span className="flex items-center gap-1.5 text-violet-700 font-bold">
+                    <FileCheck2 className="w-4 h-4 text-violet-600" />
                     Điểm Test Năng Lực
                   </span>
                 </td>
                 {selectedCandidates.map((cand) => (
-                  <td key={cand.id} className="py-3.5 px-5">
+                  <td key={cand.id} className="py-3.5 px-5 border-r border-slate-200 last:border-r-0 bg-white">
                     {cand.testResult ? (
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-base font-bold text-white">
+                          <span className="text-base font-black text-slate-900">
                             {cand.testResult.score}%
                           </span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
                             Đạt chuẩn
                           </span>
                         </div>
-                        <p className="text-[10px] text-slate-400 mt-0.5">
+                        <p className="text-[11px] text-slate-500 font-medium mt-0.5">
                           Đúng {cand.testResult.correctAnswers}/{cand.testResult.totalQuestions} câu • {cand.testResult.timeSpentMinutes} phút
                         </p>
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-500 italic">Chưa thực hiện test</span>
+                      <span className="text-xs text-slate-400 italic">Chưa thực hiện test</span>
                     )}
                   </td>
                 ))}
               </tr>
 
               {/* Row: Số năm kinh nghiệm & Vị trí hiện tại */}
-              <tr className="hover:bg-slate-800/20">
-                <td className="py-3.5 px-5 font-semibold text-slate-300 bg-slate-950/30">
+              <tr className="hover:bg-slate-50/60 transition-colors">
+                <td className="py-3.5 px-5 font-bold text-slate-800 bg-slate-50/80 border-r border-slate-200">
                   Kinh nghiệm thực chiến
                 </td>
                 {selectedCandidates.map((cand) => (
-                  <td key={cand.id} className="py-3.5 px-5">
-                    <strong className="text-white">
+                  <td key={cand.id} className="py-3.5 px-5 border-r border-slate-200 last:border-r-0 bg-white">
+                    <strong className="text-slate-900 font-bold text-sm">
                       {cand.extractedInfo.yearsOfExperience} năm
                     </strong>
-                    <p className="text-xs text-slate-300 mt-0.5">
+                    <p className="text-xs text-slate-600 mt-0.5 font-medium">
                       {cand.extractedInfo.currentRole}
                     </p>
                   </td>
@@ -272,17 +286,17 @@ export const CandidateComparisonView: React.FC<CandidateComparisonViewProps> = (
               </tr>
 
               {/* Row: Kỹ năng cốt lõi */}
-              <tr className="hover:bg-slate-800/20">
-                <td className="py-3.5 px-5 font-semibold text-slate-300 bg-slate-950/30">
+              <tr className="hover:bg-slate-50/60 transition-colors">
+                <td className="py-3.5 px-5 font-bold text-slate-800 bg-slate-50/80 border-r border-slate-200">
                   Kỹ năng chuyên môn
                 </td>
                 {selectedCandidates.map((cand) => (
-                  <td key={cand.id} className="py-3.5 px-5">
-                    <div className="flex flex-wrap gap-1">
+                  <td key={cand.id} className="py-3.5 px-5 border-r border-slate-200 last:border-r-0 bg-white">
+                    <div className="flex flex-wrap gap-1.5">
                       {cand.extractedInfo.skills.slice(0, 5).map((sk) => (
                         <span
                           key={sk}
-                          className="px-2 py-0.5 rounded bg-slate-800 text-[11px] text-slate-200 border border-slate-700"
+                          className="px-2.5 py-0.5 rounded-lg bg-slate-100 text-[11px] text-slate-700 font-semibold border border-slate-200"
                         >
                           {sk}
                         </span>
@@ -293,19 +307,19 @@ export const CandidateComparisonView: React.FC<CandidateComparisonViewProps> = (
               </tr>
 
               {/* Row: Trình độ học vấn & Chứng chỉ */}
-              <tr className="hover:bg-slate-800/20">
-                <td className="py-3.5 px-5 font-semibold text-slate-300 bg-slate-950/30">
+              <tr className="hover:bg-slate-50/60 transition-colors">
+                <td className="py-3.5 px-5 font-bold text-slate-800 bg-slate-50/80 border-r border-slate-200">
                   Học vấn & Chứng chỉ
                 </td>
                 {selectedCandidates.map((cand) => (
-                  <td key={cand.id} className="py-3.5 px-5 text-xs text-slate-300 space-y-1">
+                  <td key={cand.id} className="py-3.5 px-5 text-xs text-slate-700 space-y-1 border-r border-slate-200 last:border-r-0 bg-white">
                     {cand.extractedInfo.education.map((edu, idx) => (
-                      <div key={idx}>
-                        🎓 <strong>{edu.school}</strong> ({edu.degree})
+                      <div key={idx} className="leading-snug">
+                        🎓 <strong className="text-slate-900 font-semibold">{edu.school}</strong> ({edu.degree})
                       </div>
                     ))}
                     {cand.extractedInfo.certifications.length > 0 && (
-                      <div className="text-[11px] text-cyan-300">
+                      <div className="text-[11px] text-indigo-600 font-semibold pt-0.5">
                         📜 {cand.extractedInfo.certifications.join(', ')}
                       </div>
                     )}
@@ -314,16 +328,16 @@ export const CandidateComparisonView: React.FC<CandidateComparisonViewProps> = (
               </tr>
 
               {/* Row: Mức lương kỳ vọng & Sẵn sàng */}
-              <tr className="hover:bg-slate-800/20">
-                <td className="py-3.5 px-5 font-semibold text-slate-300 bg-slate-950/30">
+              <tr className="hover:bg-slate-50/60 transition-colors">
+                <td className="py-3.5 px-5 font-bold text-slate-800 bg-slate-50/80 border-r border-slate-200">
                   Mức lương & Sẵn sàng
                 </td>
                 {selectedCandidates.map((cand) => (
-                  <td key={cand.id} className="py-3.5 px-5">
-                    <div className="font-semibold text-amber-300">
+                  <td key={cand.id} className="py-3.5 px-5 border-r border-slate-200 last:border-r-0 bg-white">
+                    <div className="font-bold text-amber-700 text-sm">
                       {cand.expectedSalary || 'Thương lượng'}
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">
+                    <div className="text-[11px] text-slate-500 font-medium mt-0.5">
                       Báo trước: {cand.noticePeriod || 'Thoả thuận'}
                     </div>
                   </td>
@@ -331,17 +345,17 @@ export const CandidateComparisonView: React.FC<CandidateComparisonViewProps> = (
               </tr>
 
               {/* Row: Điểm mạnh chính */}
-              <tr className="hover:bg-slate-800/20">
-                <td className="py-3.5 px-5 font-semibold text-slate-300 bg-slate-950/30">
+              <tr className="hover:bg-slate-50/60 transition-colors">
+                <td className="py-3.5 px-5 font-bold text-slate-800 bg-slate-50/80 border-r border-slate-200">
                   Điểm mạnh vượt trội
                 </td>
                 {selectedCandidates.map((cand) => (
-                  <td key={cand.id} className="py-3.5 px-5 text-xs text-slate-300">
-                    <ul className="space-y-1">
+                  <td key={cand.id} className="py-3.5 px-5 text-xs text-slate-700 border-r border-slate-200 last:border-r-0 bg-white">
+                    <ul className="space-y-1.5">
                       {cand.aiAnalysis?.strengths?.slice(0, 2).map((str, idx) => (
-                        <li key={idx} className="flex items-start gap-1.5">
-                          <span className="text-emerald-400 font-bold">✓</span>
-                          <span>{str}</span>
+                        <li key={idx} className="flex items-start gap-1.5 leading-snug">
+                          <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                          <span className="font-medium text-slate-700">{str}</span>
                         </li>
                       ))}
                     </ul>
@@ -350,25 +364,25 @@ export const CandidateComparisonView: React.FC<CandidateComparisonViewProps> = (
               </tr>
 
               {/* Row: Hành động tuyển dụng nhanh */}
-              <tr className="bg-slate-950/40">
-                <td className="py-4 px-5 font-semibold text-slate-300 bg-slate-950/60">
+              <tr className="bg-slate-50/60">
+                <td className="py-4 px-5 font-bold text-slate-800 bg-slate-100/70 border-r border-slate-200">
                   Hành động nhanh
                 </td>
                 {selectedCandidates.map((cand) => (
-                  <td key={cand.id} className="py-4 px-5">
+                  <td key={cand.id} className="py-4 px-5 border-r border-slate-200 last:border-r-0 bg-white">
                     <div className="flex flex-col gap-2">
                       <button
                         onClick={() => onOpenScheduleModal(cand)}
-                        className="w-full px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                        className="w-full btn-primary px-3 py-2.5 rounded-xl text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-indigo-600/20 active:scale-98"
                       >
-                        <Calendar className="w-3.5 h-3.5" />
+                        <Calendar className="w-3.5 h-3.5 text-white" />
                         <span>Mời phỏng vấn</span>
                       </button>
                       <button
                         onClick={() => onOpenEmailModal(cand)}
-                        className="w-full px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                        className="w-full bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-98"
                       >
-                        <Send className="w-3.5 h-3.5 text-indigo-400" />
+                        <Send className="w-3.5 h-3.5 text-indigo-600" />
                         <span>Gửi email</span>
                       </button>
                     </div>
